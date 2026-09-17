@@ -71,7 +71,7 @@ gateway:
   image:
     tag: "p6"
   config:
-    LOG_LEVEL: "debug"
+    LOG_LEVEL: "info"
   autoscaling:
     minReplicas: 2
   resources:
@@ -81,4 +81,5 @@ gateway:
     limits:
       cpu: 200m
       memory: 128Mi
+
 
