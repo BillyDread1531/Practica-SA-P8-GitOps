@@ -1,0 +1,83 @@
+﻿global:
+  environment: dev
+  logLevel: debug
+
+auth-service:
+  replicaCount: 2
+  image:
+    tag: "p6"
+  config:
+    LOG_LEVEL: "debug"
+  autoscaling:
+    minReplicas: 2
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+cursos-service:
+  replicaCount: 2
+  image:
+    tag: "p6"
+  config:
+    LOG_LEVEL: "debug"
+  autoscaling:
+    minReplicas: 2
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+estudiantes-service:
+  replicaCount: 2
+  image:
+    tag: "p6"
+  config:
+    LOG_LEVEL: "debug"
+  autoscaling:
+    minReplicas: 2
+  resources:
+    requests:
+      cpu: 75m
+      memory: 96Mi
+    limits:
+      cpu: 250m
+      memory: 192Mi
+
+inscripciones-service:
+  replicaCount: 2
+  image:
+    tag: "p6"
+  config:
+    LOG_LEVEL: "debug"
+  autoscaling:
+    minReplicas: 2
+  resources:
+    requests:
+      cpu: 75m
+      memory: 96Mi
+    limits:
+      cpu: 250m
+      memory: 192Mi
+
+gateway:
+  replicaCount: 2
+  image:
+    tag: "p6"
+  config:
+    LOG_LEVEL: "debug"
+  autoscaling:
+    minReplicas: 2
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
