@@ -1,11 +1,11 @@
-﻿global:
+global:
   environment: dev
   logLevel: debug
 
 auth-service:
   replicaCount: 2
   image:
-    tag: "1.0.4"
+    tag: "p6"
   config:
     LOG_LEVEL: "debug"
   autoscaling:
@@ -21,7 +21,7 @@ auth-service:
 cursos-service:
   replicaCount: 2
   image:
-    tag: "1.0.4"
+    tag: "p6"
   config:
     LOG_LEVEL: "debug"
   autoscaling:
@@ -37,7 +37,7 @@ cursos-service:
 estudiantes-service:
   replicaCount: 2
   image:
-    tag: "1.0.4"
+    tag: "p6"
   config:
     LOG_LEVEL: "debug"
   autoscaling:
@@ -53,7 +53,7 @@ estudiantes-service:
 inscripciones-service:
   replicaCount: 2
   image:
-    tag: "1.0.4"
+    tag: "p6"
   config:
     LOG_LEVEL: "debug"
   autoscaling:
@@ -66,7 +66,10 @@ inscripciones-service:
       cpu: 250m
       memory: 192Mi
 
-gateway:`r`n  replicaCount: 2`r`n  image:`r`n    tag: "p6"
+gateway:
+  replicaCount: 2
+  image:
+    tag: "p6"
   config:
     LOG_LEVEL: "debug"
   autoscaling:
@@ -85,5 +88,5 @@ gateway:`r`n  replicaCount: 2`r`n  image:`r`n    tag: "p6"
 cronjobs:
   image:
     repository: acrsa201901385.azurecr.io/cronjobs
-    tag: "1.0.4"
+    tag: "p6"
 
