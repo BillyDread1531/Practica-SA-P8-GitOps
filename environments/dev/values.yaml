@@ -66,10 +66,7 @@ inscripciones-service:
       cpu: 250m
       memory: 192Mi
 
-gateway:
-  replicaCount: 2
-  image:
-    tag: "1.0.4"
+gateway:`r`n  replicaCount: 2`r`n  image:`r`n    tag: "p6"
   config:
     LOG_LEVEL: "debug"
   autoscaling:
@@ -89,3 +86,4 @@ cronjobs:
   image:
     repository: acrsa201901385.azurecr.io/cronjobs
     tag: "1.0.4"
+
