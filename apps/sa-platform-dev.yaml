@@ -8,7 +8,7 @@ spec:
 
   sources:
     - repoURL: https://github.com/BillyDread1531/Practica-SA-P8-GitOps.git
-      targetRevision: main
+      targetRevision: p9
       ref: values
 
     - repoURL: https://github.com/BillyDread1531/Practicas-SA-B-201901385.git
@@ -27,4 +27,4 @@ spec:
       prune: true
       selfHeal: true
     syncOptions:
-      - CreateNamespace=false
+      - CreateNamespace=true
