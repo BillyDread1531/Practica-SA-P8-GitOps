@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://kyverno.github.io/kyverno/
     chart: kyverno
-    targetRevision: 3.2.7
+    targetRevision: 3.9.1
     helm:
       values: |
         admissionController:
@@ -29,3 +29,4 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+
