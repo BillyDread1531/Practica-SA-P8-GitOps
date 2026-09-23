@@ -8,10 +8,7 @@ spec:
   source:
     repoURL: https://argoproj.github.io/argo-helm
     chart: argo-rollouts
-    targetRevision: 2.37.7
-    helm:
-      values: |
-        installCRDs: true
+    targetRevision: 2.41.1
   destination:
     server: https://kubernetes.default.svc
     namespace: argo-rollouts
@@ -21,4 +18,3 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
-      - ServerSideApply=true
