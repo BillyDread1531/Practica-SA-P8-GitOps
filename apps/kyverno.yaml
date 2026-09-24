@@ -15,6 +15,21 @@ spec:
       values: |
         # Requests ajustados al uso real: permite que un solo nodo aloje todo el sistema
         # cuando el otro se pierde (cuota regional de 4 vCPU = maximo 2 nodos D2s).
+        # Solo se usan los ClusterPolicy clasicos (grupo kyverno.io). Los CRD del grupo
+        # policies.kyverno.io (CEL) no se usan y ArgoCD los reportaba OutOfSync.
+        crds:
+          groups:
+            policies:
+              validatingpolicies: false
+              policyexceptions: false
+              imagevalidatingpolicies: false
+              namespacedimagevalidatingpolicies: false
+              mutatingpolicies: false
+              namespacedmutatingpolicies: false
+              generatingpolicies: false
+              deletingpolicies: false
+              namespaceddeletingpolicies: false
+              namespacedvalidatingpolicies: false
         admissionController:
           replicas: 1
           container:
