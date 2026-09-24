@@ -1,8 +1,11 @@
-﻿apiVersion: argoproj.io/v1alpha1
+apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: p8-kyverno-policies
   namespace: argocd
+  annotations:
+    # Ola 1: las politicas requieren los CRDs de Kyverno (ola 0)
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   project: default
   source:
@@ -18,3 +21,9 @@ spec:
     automated:
       prune: true
       selfHeal: true
+    retry:
+      limit: 10
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 5m

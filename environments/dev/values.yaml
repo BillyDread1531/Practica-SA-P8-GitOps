@@ -1,4 +1,4 @@
-﻿global:
+global:
   environment: dev
   logLevel: debug
 
@@ -90,3 +90,12 @@ cronjobs:
     repository: acrsa201901385.azurecr.io/cronjobs
     tag: "51cfc6bb05adaad0fa541395046daf466f545821"
 
+# Consistencia de los respaldos de Velero: antes de copiar el volumen de datos,
+# PostgreSQL fuerza un CHECKPOINT para que los archivos queden en un estado limpio.
+postgresql:
+  primary:
+    podAnnotations:
+      pre.hook.backup.velero.io/container: postgresql
+      pre.hook.backup.velero.io/command: '["/bin/bash", "-c", "PGPASSWORD=$(cat /opt/bitnami/postgresql/secrets/postgres-password) psql -U postgres -c CHECKPOINT"]'
+      pre.hook.backup.velero.io/on-error: Continue
+      pre.hook.backup.velero.io/timeout: 60s

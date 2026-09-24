@@ -1,8 +1,11 @@
-﻿apiVersion: argoproj.io/v1alpha1
+apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: sa-platform-dev
   namespace: argocd
+  annotations:
+    # Ola 2: usa CRDs de Rollouts/SealedSecrets y esta bajo las politicas Kyverno
+    argocd.argoproj.io/sync-wave: "2"
 spec:
   project: default
 
@@ -28,3 +31,9 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 5m
