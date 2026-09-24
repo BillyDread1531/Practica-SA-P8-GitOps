@@ -63,6 +63,8 @@ spec:
       jsonPointers:
         - /spec/conversion
         - /spec/preserveUnknownFields
+        - /metadata/annotations
+        - /metadata/labels
   destination:
     server: https://kubernetes.default.svc
     namespace: kyverno
