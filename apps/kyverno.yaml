@@ -40,6 +40,14 @@ spec:
             requests:
               cpu: 25m
               memory: 64Mi
+  # El API server normaliza estos dos campos de los CRD (conversion.strategy=None y
+  # preserveUnknownFields=false se descartan) y ArgoCD los veia como diferencia perpetua.
+  ignoreDifferences:
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      jsonPointers:
+        - /spec/conversion
+        - /spec/preserveUnknownFields
   destination:
     server: https://kubernetes.default.svc
     namespace: kyverno
