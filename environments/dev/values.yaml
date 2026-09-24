@@ -12,7 +12,7 @@ auth-service:
     minReplicas: 2
   resources:
     requests:
-      cpu: 50m
+      cpu: 15m
       memory: 64Mi
     limits:
       cpu: 200m
@@ -28,7 +28,7 @@ cursos-service:
     minReplicas: 2
   resources:
     requests:
-      cpu: 50m
+      cpu: 15m
       memory: 64Mi
     limits:
       cpu: 200m
@@ -44,7 +44,7 @@ estudiantes-service:
     minReplicas: 2
   resources:
     requests:
-      cpu: 75m
+      cpu: 20m
       memory: 96Mi
     limits:
       cpu: 250m
@@ -60,7 +60,7 @@ inscripciones-service:
     minReplicas: 2
   resources:
     requests:
-      cpu: 75m
+      cpu: 20m
       memory: 96Mi
     limits:
       cpu: 250m
@@ -76,7 +76,7 @@ gateway:
     minReplicas: 2
   resources:
     requests:
-      cpu: 50m
+      cpu: 15m
       memory: 64Mi
     limits:
       cpu: 200m
@@ -94,8 +94,18 @@ cronjobs:
 # PostgreSQL fuerza un CHECKPOINT para que los archivos queden en un estado limpio.
 postgresql:
   primary:
+    # Requests ajustados al uso real (1-10 m) para que UN nodo pueda alojar todas
+    # las replicas tras perder el otro (capacidad N+1 con la cuota de 4 vCPU).
+    resources:
+      requests:
+        cpu: 50m
     podAnnotations:
       pre.hook.backup.velero.io/container: postgresql
       pre.hook.backup.velero.io/command: '["/bin/bash", "-c", "PGPASSWORD=$(cat /opt/bitnami/postgresql/secrets/postgres-password) psql -U postgres -c CHECKPOINT"]'
       pre.hook.backup.velero.io/on-error: Continue
       pre.hook.backup.velero.io/timeout: 60s
+
+rabbitmq:
+  resources:
+    requests:
+      cpu: 50m
