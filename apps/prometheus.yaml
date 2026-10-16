@@ -61,46 +61,17 @@ spec:
         prometheus-pushgateway:
           enabled: false
 
+        # NOTA: no se declara "scrape_configs" aqui a proposito. El chart YA
+        # incluye por defecto (fuera de values.yaml, generado en su propio
+        # template) un job "kubernetes-pods" completo: filtra por la
+        # anotacion prometheus.io/scrape y promueve TODAS las etiquetas del
+        # pod -incluida rollouts-pod-template-hash, que Argo Rollouts asigna
+        # a cada revision- a etiquetas de Prometheus via "action: labelmap".
+        # Es exactamente lo que el AnalysisTemplate del canary necesita
+        # (consultable como rollouts_pod_template_hash) y agregar un job
+        # propio con el mismo nombre solo producia un error de arranque
+        # ("found multiple scrape configs with job name ...").
         serverFiles:
-          prometheus.yml:
-            scrape_configs:
-              - job_name: prometheus-self
-                static_configs:
-                  - targets: ["localhost:9090"]
-
-              # Descubre TODOS los pods con la anotacion prometheus.io/scrape=true
-              # en cualquier namespace (los 3 servicios instrumentados exponen
-              # /metrics via prom-client). El "labelmap" promueve TODAS las
-              # etiquetas del pod -incluida rollouts-pod-template-hash, que
-              # Argo Rollouts asigna a cada revision- a etiquetas de Prometheus,
-              # consultables como rollouts_pod_template_hash. Esto es lo que
-              # permite que el AnalysisTemplate del canary filtre metricas por
-              # SOLO los pods de la version candidata.
-              - job_name: kubernetes-pods
-                kubernetes_sd_configs:
-                  - role: pod
-                relabel_configs:
-                  - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
-                    action: keep
-                    regex: true
-                  - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
-                    action: replace
-                    target_label: __metrics_path__
-                    regex: (.+)
-                  - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
-                    action: replace
-                    regex: ([^:]+)(?::\d+)?;(\d+)
-                    replacement: $1:$2
-                    target_label: __address__
-                  - action: labelmap
-                    regex: __meta_kubernetes_pod_label_(.+)
-                  - source_labels: [__meta_kubernetes_namespace]
-                    action: replace
-                    target_label: namespace
-                  - source_labels: [__meta_kubernetes_pod_name]
-                    action: replace
-                    target_label: pod
-
           # ------------------------------------------------------------------
           # SLO 1: Disponibilidad del gateway (lo que el usuario experimenta
           # al usar la plataforma). Objetivo: 99% de las peticiones en 30d
