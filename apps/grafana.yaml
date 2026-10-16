@@ -83,7 +83,8 @@ spec:
 
         dashboards:
           default:
-            operacion.json: |
+            operacion:
+              json: |
                 {
                   "title": "Operación - Plataforma SA (4 señales de oro)",
                   "uid": "sa-operacion",
