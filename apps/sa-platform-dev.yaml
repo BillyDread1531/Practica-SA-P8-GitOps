@@ -11,7 +11,7 @@ spec:
 
   sources:
     - repoURL: https://github.com/BillyDread1531/Practica-SA-P8-GitOps.git
-      targetRevision: p9
+      targetRevision: p10
       ref: values
 
     - repoURL: https://github.com/BillyDread1531/Practicas-SA-B-201901385.git
