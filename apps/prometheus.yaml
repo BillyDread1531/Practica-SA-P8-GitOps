@@ -15,6 +15,13 @@ spec:
       values: |
         # Recursos minimos: cluster de un solo nodo, vida corta.
         server:
+          global:
+            # 1m (el default del chart) es demasiado grueso para los rate()
+            # de ventana corta (p.ej. TasaErrorAuthServiceElevada usa [1m]):
+            # con scrape cada 60s, rate() sobre 60s a veces no tiene ni 2
+            # muestras y devuelve vacio. 15s da margen de sobra.
+            scrape_interval: 15s
+            evaluation_interval: 15s
           persistentVolume:
             enabled: false
           resources:
