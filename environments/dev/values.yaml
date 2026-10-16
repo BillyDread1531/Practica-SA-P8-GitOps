@@ -22,7 +22,7 @@ auth-service:
     OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector-opentelemetry-collector.observability.svc.cluster.local:4318"
     # Fallo inducido de la demo "sintoma a causa" (ver P10/runbooks/ y
     # P10/scripts/prueba-sintoma-causa.ps1). Por defecto apagado.
-    FAULT_INJECTION: "true"
+    FAULT_INJECTION: "false"
     FAULT_ERROR_RATE: "0.4"
     FAULT_EXTRA_LATENCY_MS: "1500"
   autoscaling:
