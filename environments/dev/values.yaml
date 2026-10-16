@@ -110,6 +110,12 @@ gateway:
     CANARY_FAULT_INJECTION: "false"
     CANARY_FAULT_ERROR_RATE: "0.5"
     CANARY_FAULT_LATENCY_MS: "2000"
+    # Cambia en cada corrida de prueba (ver prueba-canary-metricas.ps1) solo
+    # para forzar un pod-template-hash nuevo: con el mismo hash que una
+    # revision ya existente en el historial (replicaCount/imagen/config
+    # idénticos entre corridas repetidas), Argo Rollouts reutiliza la
+    # revision y su AnalysisRun ya concluido en vez de medir de nuevo.
+    CANARY_TEST_NONCE: "0"
   autoscaling:
     minReplicas: 2
   resources:
