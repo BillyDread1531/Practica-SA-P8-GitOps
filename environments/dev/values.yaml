@@ -5,7 +5,8 @@ global:
 auth-service:
   replicaCount: 2
   image:
-    tag: "51cfc6bb05adaad0fa541395046daf466f545821"
+    repository: ghcr.io/billydread1531/auth-service
+    tag: "p10-latest"
   config:
     LOG_LEVEL: "debug"
   autoscaling:
@@ -21,7 +22,8 @@ auth-service:
 cursos-service:
   replicaCount: 2
   image:
-    tag: "51cfc6bb05adaad0fa541395046daf466f545821"
+    repository: ghcr.io/billydread1531/cursos-service
+    tag: "p10-latest"
   config:
     LOG_LEVEL: "debug"
   autoscaling:
@@ -37,7 +39,8 @@ cursos-service:
 estudiantes-service:
   replicaCount: 2
   image:
-    tag: "51cfc6bb05adaad0fa541395046daf466f545821"
+    repository: ghcr.io/billydread1531/estudiantes-service
+    tag: "p10-latest"
   config:
     LOG_LEVEL: "debug"
   autoscaling:
@@ -53,7 +56,8 @@ estudiantes-service:
 inscripciones-service:
   replicaCount: 2
   image:
-    tag: "51cfc6bb05adaad0fa541395046daf466f545821"
+    repository: ghcr.io/billydread1531/inscripciones-service
+    tag: "p10-latest"
   config:
     LOG_LEVEL: "debug"
   autoscaling:
@@ -69,7 +73,8 @@ inscripciones-service:
 gateway:
   replicaCount: 2
   image:
-    tag: "51cfc6bb05adaad0fa541395046daf466f545821"
+    repository: ghcr.io/billydread1531/gateway
+    tag: "p10-latest"
   config:
     LOG_LEVEL: "debug"
   autoscaling:
@@ -87,8 +92,8 @@ gateway:
 
 cronjobs:
   image:
-    repository: acrsa201901385.azurecr.io/cronjobs
-    tag: "51cfc6bb05adaad0fa541395046daf466f545821"
+    repository: ghcr.io/billydread1531/cronjobs
+    tag: "p10-latest"
 
 # Consistencia de los respaldos de Velero: antes de copiar el volumen de datos,
 # PostgreSQL fuerza un CHECKPOINT para que los archivos queden en un estado limpio.
