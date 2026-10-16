@@ -93,6 +93,12 @@ gateway:
   image:
     repository: ghcr.io/billydread1531/gateway
     tag: "p10-latest"
+  # El default del chart es LoadBalancer (heredado de P5/P8, antes de la
+  # restriccion de costo cero de P10). Un LoadBalancer de Azure cobra por
+  # hora mientras exista su IP publica; se accede al gateway solo por
+  # port-forward (ver P10/scripts/generar-trafico.ps1 y verificar.ps1).
+  service:
+    type: ClusterIP
   config:
     LOG_LEVEL: "debug"
     OTEL_SERVICE_NAME: "gateway"
