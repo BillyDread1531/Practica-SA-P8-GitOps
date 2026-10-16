@@ -19,7 +19,7 @@ auth-service:
   config:
     LOG_LEVEL: "debug"
     OTEL_SERVICE_NAME: "auth-service"
-    OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.observability.svc.cluster.local:4318"
+    OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector-opentelemetry-collector.observability.svc.cluster.local:4318"
     # Fallo inducido de la demo "sintoma a causa" (ver P10/runbooks/ y
     # P10/scripts/prueba-sintoma-causa.ps1). Por defecto apagado.
     FAULT_INJECTION: "false"
@@ -43,7 +43,7 @@ cursos-service:
   config:
     LOG_LEVEL: "debug"
     OTEL_SERVICE_NAME: "cursos-service"
-    OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.observability.svc.cluster.local:4318"
+    OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector-opentelemetry-collector.observability.svc.cluster.local:4318"
   autoscaling:
     minReplicas: 2
   resources:
@@ -96,7 +96,7 @@ gateway:
   config:
     LOG_LEVEL: "debug"
     OTEL_SERVICE_NAME: "gateway"
-    OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.observability.svc.cluster.local:4318"
+    OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector-opentelemetry-collector.observability.svc.cluster.local:4318"
     # Fallo inducido de la demo del canary gobernado por metricas (ver
     # P10/scripts/prueba-canary-metricas.ps1). Por defecto apagado: cuando se
     # pone en "true" aqui, Argo Rollouts despliega la revision nueva como
