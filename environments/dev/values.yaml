@@ -101,7 +101,7 @@ gateway:
     # P10/scripts/prueba-canary-metricas.ps1). Por defecto apagado: cuando se
     # pone en "true" aqui, Argo Rollouts despliega la revision nueva como
     # canary y el AnalysisTemplate "gateway-metrics" la mide y revierte sola.
-    CANARY_FAULT_INJECTION: "true"
+    CANARY_FAULT_INJECTION: "false"
     CANARY_FAULT_ERROR_RATE: "0.5"
     CANARY_FAULT_LATENCY_MS: "2000"
   autoscaling:
