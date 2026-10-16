@@ -163,10 +163,10 @@ spec:
 
                   - alert: TasaErrorAuthServiceElevada
                     expr: |
-                      (sum(rate(http_requests_total{service="auth-service", status_code=~"5.."}[5m])) or vector(0))
+                      (sum(rate(http_requests_total{service="auth-service", status_code=~"5.."}[1m])) or vector(0))
                       /
-                      (sum(rate(http_requests_total{service="auth-service"}[5m])) + 0.001) > 0.10
-                    for: 1m
+                      (sum(rate(http_requests_total{service="auth-service"}[1m])) + 0.001) > 0.10
+                    for: 30s
                     labels:
                       severity: critical
                       service: auth-service
