@@ -1,0 +1,81 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: otel-collector
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  source:
+    repoURL: https://open-telemetry.github.io/opentelemetry-helm-charts
+    chart: opentelemetry-collector
+    targetRevision: 0.176.0
+    helm:
+      values: |
+        mode: deployment
+        replicaCount: 1
+
+        resources:
+          requests:
+            cpu: 50m
+            memory: 96Mi
+          limits:
+            cpu: 300m
+            memory: 256Mi
+
+        # Nada de metricas aqui (eso lo hace Prometheus directo contra cada
+        # servicio): el Collector solo recibe trazas por OTLP de los 3
+        # servicios instrumentados y las reenvia a Tempo. Mantenerlo a una
+        # sola tarea reduce su huella en un cluster de un nodo.
+        config:
+          receivers:
+            otlp:
+              protocols:
+                grpc:
+                  endpoint: 0.0.0.0:4317
+                http:
+                  endpoint: 0.0.0.0:4318
+          processors:
+            batch: {}
+            resource:
+              attributes:
+                - key: deployment.environment
+                  value: dev
+                  action: upsert
+          exporters:
+            otlp/tempo:
+              endpoint: tempo.observability.svc.cluster.local:4317
+              tls:
+                insecure: true
+          service:
+            pipelines:
+              traces:
+                receivers: [otlp]
+                processors: [batch, resource]
+                exporters: [otlp/tempo]
+              # Los pipelines de metrics/logs por defecto del chart (exportador
+              # "debug", solo a la consola del propio Collector) se dejan
+              # intactos: no se usan desde el codigo, son inofensivos, y
+              # anularlos con null arriesga un error de validacion del
+              # Collector en lugar de simplemente no declararlos.
+
+        ports:
+          metrics:
+            enabled: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 5m

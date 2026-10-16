@@ -1,0 +1,286 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grafana
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    chart: grafana
+    targetRevision: 10.5.15
+    helm:
+      values: |
+        resources:
+          requests:
+            cpu: 25m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+
+        persistence:
+          enabled: false
+
+        # Login simple para una practica academica de vida corta. Se cambia
+        # (o se vuelve a generar) si el cluster se reconstruye.
+        adminUser: admin
+        adminPassword: practica10
+
+        datasources:
+          datasources.yaml:
+            apiVersion: 1
+            datasources:
+              - name: Prometheus
+                type: prometheus
+                uid: prometheus
+                access: proxy
+                url: http://prometheus-server.observability.svc.cluster.local
+                isDefault: true
+
+              - name: Loki
+                type: loki
+                uid: loki
+                access: proxy
+                url: http://loki.observability.svc.cluster.local:3100
+                jsonData:
+                  # Desde un registro con trace_id, un boton abre su traza en Tempo.
+                  derivedFields:
+                    - datasourceUid: tempo
+                      matcherRegex: '"trace_id":"(\w+)"'
+                      name: TraceID
+                      url: '${__value.raw}'
+
+              - name: Tempo
+                type: tempo
+                uid: tempo
+                access: proxy
+                url: http://tempo.observability.svc.cluster.local:3100
+                jsonData:
+                  # Desde una traza en Tempo, un boton abre sus registros en Loki.
+                  tracesToLogsV2:
+                    datasourceUid: loki
+                    spanStartTimeShift: "-5m"
+                    spanEndTimeShift: "5m"
+                    filterByTraceID: true
+                    customQuery: true
+                    query: '{namespace="sa-p8"} | json | trace_id="${__trace.traceId}"'
+
+        dashboardProviders:
+          dashboardproviders.yaml:
+            apiVersion: 1
+            providers:
+              - name: default
+                orgId: 1
+                folder: ""
+                type: file
+                disableDeletion: false
+                editable: true
+                options:
+                  path: /var/lib/grafana/dashboards/default
+
+        dashboards:
+          default:
+            operacion.json: |
+                {
+                  "title": "Operación - Plataforma SA (4 señales de oro)",
+                  "uid": "sa-operacion",
+                  "schemaVersion": 39,
+                  "version": 1,
+                  "editable": true,
+                  "refresh": "15s",
+                  "time": { "from": "now-30m", "to": "now" },
+                  "tags": ["practica-10", "operacion"],
+                  "panels": [
+                    {
+                      "id": 1,
+                      "title": "TRÁFICO - peticiones/seg al gateway",
+                      "type": "timeseries",
+                      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 0 },
+                      "datasource": { "type": "prometheus", "uid": "prometheus" },
+                      "targets": [
+                        {
+                          "expr": "sum(rate(http_requests_total{service=\"gateway\"}[1m])) by (route)",
+                          "legendFormat": "{{route}}",
+                          "refId": "A"
+                        }
+                      ],
+                      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+                    },
+                    {
+                      "id": 2,
+                      "title": "ERRORES - % de respuestas 5xx (gateway)",
+                      "type": "timeseries",
+                      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 0 },
+                      "datasource": { "type": "prometheus", "uid": "prometheus" },
+                      "targets": [
+                        {
+                          "expr": "100 * (1 - sli:gateway_availability:ratio_rate5m)",
+                          "legendFormat": "% error",
+                          "refId": "A"
+                        }
+                      ],
+                      "fieldConfig": {
+                        "defaults": {
+                          "unit": "percent",
+                          "thresholds": {
+                            "steps": [
+                              { "color": "green", "value": null },
+                              { "color": "orange", "value": 1 },
+                              { "color": "red", "value": 10 }
+                            ]
+                          }
+                        },
+                        "overrides": []
+                      }
+                    },
+                    {
+                      "id": 3,
+                      "title": "LATENCIA - p95 del gateway (ms)",
+                      "type": "timeseries",
+                      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 0 },
+                      "datasource": { "type": "prometheus", "uid": "prometheus" },
+                      "targets": [
+                        {
+                          "expr": "sli:gateway_latency:p95_5m * 1000",
+                          "legendFormat": "p95 (ms)",
+                          "refId": "A"
+                        }
+                      ],
+                      "fieldConfig": {
+                        "defaults": {
+                          "unit": "ms",
+                          "thresholds": {
+                            "steps": [
+                              { "color": "green", "value": null },
+                              { "color": "orange", "value": 500 },
+                              { "color": "red", "value": 1000 }
+                            ]
+                          }
+                        },
+                        "overrides": []
+                      }
+                    },
+                    {
+                      "id": 4,
+                      "title": "SATURACIÓN - CPU de proceso por servicio (seg/seg)",
+                      "type": "timeseries",
+                      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 6 },
+                      "datasource": { "type": "prometheus", "uid": "prometheus" },
+                      "targets": [
+                        {
+                          "expr": "rate(process_cpu_seconds_total[2m])",
+                          "legendFormat": "{{service}}",
+                          "refId": "A"
+                        }
+                      ]
+                    },
+                    {
+                      "id": 5,
+                      "title": "SLO - presupuesto de error consumido (disponibilidad, ventana 1h)",
+                      "type": "gauge",
+                      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 6 },
+                      "datasource": { "type": "prometheus", "uid": "prometheus" },
+                      "targets": [
+                        { "expr": "slo:gateway_availability:error_budget_burn1h", "refId": "A" }
+                      ],
+                      "fieldConfig": {
+                        "defaults": {
+                          "min": 0,
+                          "max": 5,
+                          "thresholds": {
+                            "steps": [
+                              { "color": "green", "value": null },
+                              { "color": "orange", "value": 1 },
+                              { "color": "red", "value": 2 }
+                            ]
+                          }
+                        },
+                        "overrides": []
+                      }
+                    },
+                    {
+                      "id": 6,
+                      "title": "SLO - presupuesto de error consumido (latencia, ventana 1h)",
+                      "type": "gauge",
+                      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 6 },
+                      "datasource": { "type": "prometheus", "uid": "prometheus" },
+                      "targets": [
+                        { "expr": "slo:gateway_latency:error_budget_burn1h", "refId": "A" }
+                      ],
+                      "fieldConfig": {
+                        "defaults": {
+                          "min": 0,
+                          "max": 5,
+                          "thresholds": {
+                            "steps": [
+                              { "color": "green", "value": null },
+                              { "color": "orange", "value": 1 },
+                              { "color": "red", "value": 2 }
+                            ]
+                          }
+                        },
+                        "overrides": []
+                      }
+                    },
+                    {
+                      "id": 7,
+                      "title": "NEGOCIO - usuarios registrados (acumulado)",
+                      "type": "stat",
+                      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 12 },
+                      "datasource": { "type": "prometheus", "uid": "prometheus" },
+                      "targets": [{ "expr": "sum(usuarios_registrados_total)", "refId": "A" }]
+                    },
+                    {
+                      "id": 8,
+                      "title": "NEGOCIO - cursos creados (acumulado)",
+                      "type": "stat",
+                      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 12 },
+                      "datasource": { "type": "prometheus", "uid": "prometheus" },
+                      "targets": [{ "expr": "sum(cursos_creados_total)", "refId": "A" }]
+                    },
+                    {
+                      "id": 9,
+                      "title": "Tasa de error por servicio (no solo el gateway)",
+                      "type": "timeseries",
+                      "gridPos": { "h": 5, "w": 12, "x": 12, "y": 12 },
+                      "datasource": { "type": "prometheus", "uid": "prometheus" },
+                      "targets": [
+                        {
+                          "expr": "sum(rate(http_requests_total{status_code=~\"5..\"}[2m])) by (service) / (sum(rate(http_requests_total[2m])) by (service) + 0.001)",
+                          "legendFormat": "{{service}}",
+                          "refId": "A"
+                        }
+                      ],
+                      "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] }
+                    },
+                    {
+                      "id": 10,
+                      "title": "Registros recientes (todos los servicios, JSON con trace_id)",
+                      "type": "logs",
+                      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 17 },
+                      "datasource": { "type": "loki", "uid": "loki" },
+                      "targets": [
+                        { "expr": "{namespace=\"sa-p8\"} | json", "refId": "A" }
+                      ]
+                    }
+                  ]
+                }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 5m

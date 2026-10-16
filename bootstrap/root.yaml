@@ -1,13 +1,13 @@
-﻿apiVersion: argoproj.io/v1alpha1
+apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: p9-root-app
+  name: p10-root-app
   namespace: argocd
 spec:
   project: default
   source:
     repoURL: https://github.com/BillyDread1531/Practica-SA-P8-GitOps.git
-    targetRevision: p9
+    targetRevision: p10
     path: apps
     directory:
       recurse: true
@@ -20,3 +20,9 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 5m

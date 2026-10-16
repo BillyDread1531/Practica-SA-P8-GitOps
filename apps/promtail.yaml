@@ -1,0 +1,64 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: promtail
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    chart: promtail
+    targetRevision: 6.17.1
+    helm:
+      values: |
+        # DaemonSet que lee el stdout de TODOS los pods (via el filesystem de
+        # contenedores del nodo) y lo envia a Loki. Nuestros 3 servicios
+        # instrumentados escriben JSON con trace_id/span_id (pino); el stage
+        # "json" de abajo lo parsea para que sean filtrables por campo en
+        # Grafana/LogQL, y no solo texto libre.
+        resources:
+          requests:
+            cpu: 25m
+            memory: 64Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+
+        config:
+          clients:
+            # Sin gateway (gateway.enabled=false en loki.yaml): se apunta
+            # directo al servicio del single-binary, puerto HTTP de Loki.
+            - url: http://loki.observability.svc.cluster.local:3100/loki/api/v1/push
+              tenant_id: ""
+          snippets:
+            pipelineStages:
+              - cri: {}
+              - json:
+                  expressions:
+                    level: level
+                    trace_id: trace_id
+                    span_id: span_id
+                    service: service
+                    msg: msg
+              - labels:
+                  level:
+                  trace_id:
+                  service:
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 5m

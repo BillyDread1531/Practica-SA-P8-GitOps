@@ -1,0 +1,205 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: prometheus
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: prometheus
+    targetRevision: 29.37.0
+    helm:
+      values: |
+        # Recursos minimos: cluster de un solo nodo, vida corta.
+        server:
+          persistentVolume:
+            enabled: false
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          retention: "6h"
+          extraArgs:
+            query.max-concurrency: "5"
+
+        alertmanager:
+          persistence:
+            enabled: false
+          resources:
+            requests:
+              cpu: 15m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          # Sin integracion externa (Slack/email) configurada: la evidencia de
+          # las alertas se toma directamente de la UI de Alertmanager/Prometheus.
+          # Documentado como limite honesto en el informe de operacion.
+          config:
+            global: {}
+            route:
+              group_by: ["alertname", "severity"]
+              group_wait: 15s
+              group_interval: 2m
+              repeat_interval: 1h
+              receiver: default-receiver
+            receivers:
+              - name: default-receiver
+
+        # Sin estos tres: ahorran CPU/RAM y no son necesarios para P10
+        # (P10 evalua metricas de aplicacion, no metricas de infraestructura).
+        kube-state-metrics:
+          enabled: false
+        prometheus-node-exporter:
+          enabled: false
+        prometheus-pushgateway:
+          enabled: false
+
+        serverFiles:
+          prometheus.yml:
+            scrape_configs:
+              - job_name: prometheus
+                static_configs:
+                  - targets: ["localhost:9090"]
+
+              # Descubre TODOS los pods con la anotacion prometheus.io/scrape=true
+              # en cualquier namespace (los 3 servicios instrumentados exponen
+              # /metrics via prom-client). El "labelmap" promueve TODAS las
+              # etiquetas del pod -incluida rollouts-pod-template-hash, que
+              # Argo Rollouts asigna a cada revision- a etiquetas de Prometheus,
+              # consultables como rollouts_pod_template_hash. Esto es lo que
+              # permite que el AnalysisTemplate del canary filtre metricas por
+              # SOLO los pods de la version candidata.
+              - job_name: kubernetes-pods
+                kubernetes_sd_configs:
+                  - role: pod
+                relabel_configs:
+                  - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+                    action: keep
+                    regex: true
+                  - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+                    action: replace
+                    target_label: __metrics_path__
+                    regex: (.+)
+                  - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+                    action: replace
+                    regex: ([^:]+)(?::\d+)?;(\d+)
+                    replacement: $1:$2
+                    target_label: __address__
+                  - action: labelmap
+                    regex: __meta_kubernetes_pod_label_(.+)
+                  - source_labels: [__meta_kubernetes_namespace]
+                    action: replace
+                    target_label: namespace
+                  - source_labels: [__meta_kubernetes_pod_name]
+                    action: replace
+                    target_label: pod
+
+          # ------------------------------------------------------------------
+          # SLO 1: Disponibilidad del gateway (lo que el usuario experimenta
+          # al usar la plataforma). Objetivo: 99% de las peticiones en 30d
+          # sin error 5xx. Ventana corta (1h/6h) aqui porque el cluster vive
+          # unas horas; en produccion la ventana seria de 30d.
+          #
+          # SLO 2: Latencia del gateway. Objetivo: 95% de las peticiones
+          # respondidas en menos de 500ms en 30d.
+          #
+          # Las reglas de registro calculan, en cada evaluacion, el indicador
+          # (sli) y el presupuesto de error consumido (0 = nada consumido,
+          # 1 = presupuesto agotado).
+          # ------------------------------------------------------------------
+          recording_rules.yml:
+            groups:
+              - name: slo-disponibilidad-gateway
+                interval: 30s
+                rules:
+                  - record: sli:gateway_availability:ratio_rate5m
+                    expr: |
+                      sum(rate(http_requests_total{service="gateway", status_code!~"5.."}[5m]))
+                      /
+                      (sum(rate(http_requests_total{service="gateway"}[5m])) + 0.001)
+
+                  - record: sli:gateway_availability:ratio_rate1h
+                    expr: |
+                      sum(rate(http_requests_total{service="gateway", status_code!~"5.."}[1h]))
+                      /
+                      (sum(rate(http_requests_total{service="gateway"}[1h])) + 0.001)
+
+                  # Presupuesto de error consumido en la ventana de 1h, respecto
+                  # al objetivo de 99% (0.01 de presupuesto). > 1 = agotado.
+                  - record: slo:gateway_availability:error_budget_burn1h
+                    expr: |
+                      (1 - sli:gateway_availability:ratio_rate1h) / 0.01
+
+              - name: slo-latencia-gateway
+                interval: 30s
+                rules:
+                  - record: sli:gateway_latency:p95_5m
+                    expr: |
+                      histogram_quantile(0.95,
+                        sum(rate(http_request_duration_seconds_bucket{service="gateway"}[5m])) by (le)
+                      )
+
+                  - record: sli:gateway_latency:ratio_fast_rate1h
+                    expr: |
+                      sum(rate(http_request_duration_seconds_bucket{service="gateway", le="0.5"}[1h]))
+                      /
+                      (sum(rate(http_request_duration_seconds_count{service="gateway"}[1h])) + 0.001)
+
+                  # Objetivo: 95% de peticiones < 500ms (presupuesto = 0.05).
+                  - record: slo:gateway_latency:error_budget_burn1h
+                    expr: |
+                      (1 - sli:gateway_latency:ratio_fast_rate1h) / 0.05
+
+          # ------------------------------------------------------------------
+          # Alertas por CONSUMO DE PRESUPUESTO (burn rate), no por umbral
+          # instantaneo: una latencia alta de 10 segundos no dispara nada por
+          # si sola; lo que dispara la alerta es que el presupuesto de error
+          # de la ventana se esta agotando de forma sostenida.
+          # Cada alerta enlaza a su runbook (anotacion runbook_url).
+          # ------------------------------------------------------------------
+          alerting_rules.yml:
+            groups:
+              - name: slo-burn-rate
+                rules:
+                  - alert: PresupuestoDisponibilidadGatewayAgotandose
+                    expr: slo:gateway_availability:error_budget_burn1h > 2
+                    for: 2m
+                    labels:
+                      severity: critical
+                      slo: disponibilidad-gateway
+                    annotations:
+                      summary: "El gateway esta consumiendo el presupuesto de error de disponibilidad mas rapido de lo sostenible"
+                      description: "Quemando el presupuesto de error a {{ $value | printf \"%.1f\" }}x la tasa sostenible (objetivo 99% en 1h). Si continua asi, el SLO del mes se incumple en menos de un dia."
+                      runbook_url: "https://github.com/BillyDread1531/Practicas-SA-B-201901385/blob/main/P10/runbooks/presupuesto-disponibilidad-gateway.md"
+
+                  - alert: PresupuestoLatenciaGatewayAgotandose
+                    expr: slo:gateway_latency:error_budget_burn1h > 2
+                    for: 2m
+                    labels:
+                      severity: critical
+                      slo: latencia-gateway
+                    annotations:
+                      summary: "El gateway esta consumiendo el presupuesto de error de latencia mas rapido de lo sostenible"
+                      description: "Quemando el presupuesto de error de latencia a {{ $value | printf \"%.1f\" }}x la tasa sostenible (objetivo p95 < 500ms, 95% en 1h)."
+                      runbook_url: "https://github.com/BillyDread1531/Practicas-SA-B-201901385/blob/main/P10/runbooks/presupuesto-latencia-gateway.md"
+
+                  - alert: TasaErrorAuthServiceElevada
+                    expr: |
+                      (sum(rate(http_requests_total{service="auth-service", status_code=~"5.."}[5m])) or vector(0))
+                      /
+                      (sum(rate(http_requests_total{service="auth-service"}[5m])) + 0.001) > 0.10
+                    for: 1m
+                    labels:
+                      severity: critical
+                      service: auth-service
+                    annotations:
+                      summary: "auth-service esta devolviendo mas de 10% de errores 5xx"
+                      description: "Tasa de error de auth-service = {{ $value | humanizePercentage }}. Posible fallo inducido o dependencia caida (ver runbook)."
+                      runbook_url: "https://github.com/BillyDread1531/Practicas-SA-B-201901385/blob/main/P10/runbooks/tasa-error-auth-service.md"
