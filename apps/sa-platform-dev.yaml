@@ -15,7 +15,7 @@ spec:
       ref: values
 
     - repoURL: https://github.com/BillyDread1531/Practicas-SA-B-201901385.git
-      targetRevision: 396917fc9710f4ce7d29245673ff84f46a09f78b
+      targetRevision: main
       path: P8/charts/sa-platform
       helm:
         valueFiles:
