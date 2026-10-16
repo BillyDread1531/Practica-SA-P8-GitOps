@@ -203,3 +203,19 @@ spec:
                       summary: "auth-service esta devolviendo mas de 10% de errores 5xx"
                       description: "Tasa de error de auth-service = {{ $value | humanizePercentage }}. Posible fallo inducido o dependencia caida (ver runbook)."
                       runbook_url: "https://github.com/BillyDread1531/Practicas-SA-B-201901385/blob/main/P10/runbooks/tasa-error-auth-service.md"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 5m
