@@ -115,7 +115,7 @@ gateway:
     # revision ya existente en el historial (replicaCount/imagen/config
     # idénticos entre corridas repetidas), Argo Rollouts reutiliza la
     # revision y su AnalysisRun ya concluido en vez de medir de nuevo.
-    CANARY_TEST_NONCE: "1792127547"
+    CANARY_TEST_NONCE: "1792128460"
   autoscaling:
     minReplicas: 2
   resources:
