@@ -2,6 +2,16 @@ global:
   environment: dev
   logLevel: debug
 
+# Resiliencia ante perdida de nodo (rubrica 2.5): cada Deployment/Rollout
+# stateless (auth-service, cursos-service, estudiantes-service,
+# inscripciones-service, gateway) declara en su propia plantilla
+# (P8/charts/*/templates/{deployment,rollout}.yaml) una podAntiAffinity
+# "preferred" por app.kubernetes.io/name con topologyKey
+# kubernetes.io/hostname, ademas de PodDisruptionBudget y replicaCount: 2 en
+# este mismo archivo. No se repite el bloque YAML aqui porque la plantilla
+# ya lo versiona; esta nota solo deja constancia explicita del mecanismo en
+# el repositorio GitOps.
+
 auth-service:
   replicaCount: 2
   image:
